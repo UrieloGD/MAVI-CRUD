@@ -21,7 +21,7 @@ class Auth {
         }
     }
 
-    // Iniciar sesión SIN hash
+    // Iniciar sesión CON hash
     public function login($username, $password) {
         try {
             $pdo = $this->db->getPdo();
@@ -29,8 +29,8 @@ class Auth {
             $stmt->execute([$username]);
             $user = $stmt->fetch();
 
-            // Comparación directa sin hash
-            if ($user && $user['password'] === $password) {
+            // Verificar hash de contraseña
+            if ($user && password_verify($password, $user['password'])) {
                 $this->startSession();
                 $_SESSION['user_id'] = $user['id'];
                 $_SESSION['username'] = $user['username'];
@@ -41,6 +41,38 @@ class Auth {
         } catch (Exception $e) {
             // Para debug temporal
             echo "Error: " . $e->getMessage();
+            return false;
+        }
+    }
+
+    // Método para cambiar contraseña
+    public function changePassword($username, $newPassword) {
+        try {
+            $pdo = $this->db->getPdo();
+            $hashedPassword = password_hash($newPassword, PASSWORD_DEFAULT);
+            
+            $stmt = $pdo->prepare("UPDATE usuarios SET password = ? WHERE username = ?");
+            $result = $stmt->execute([$hashedPassword, $username]);
+            
+            return $result;
+        } catch (Exception $e) {
+            echo "Error al cambiar contraseña: " . $e->getMessage();
+            return false;
+        }
+    }
+
+    // Método para crear usuario con contraseña hasheada
+    public function createUser($username, $password) {
+        try {
+            $pdo = $this->db->getPdo();
+            $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+            
+            $stmt = $pdo->prepare("INSERT INTO usuarios (username, password) VALUES (?, ?)");
+            $result = $stmt->execute([$username, $hashedPassword]);
+            
+            return $result;
+        } catch (Exception $e) {
+            echo "Error al crear usuario: " . $e->getMessage();
             return false;
         }
     }

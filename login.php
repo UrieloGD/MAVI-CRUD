@@ -88,12 +88,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             </button>
                         </form>
 
-                        <div class="text-center mt-4">
+                        <!-- <div class="text-center mt-4">
                             <small class="text-muted">
                                 <strong>Usuario de prueba:</strong> admin<br>
                                 <strong>Contraseña:</strong> admin123
                             </small>
-                        </div>
+                        </div> -->
                     </div>
                 </div>
             </div>

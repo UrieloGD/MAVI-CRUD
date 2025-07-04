@@ -67,6 +67,9 @@ $currentUser = $auth->getCurrentUser();
                             </small>
                         </div>
                     </div>
+                    <a class="dropdown-item" href="./functions/change_password.php">
+                        <i class="bi bi-key"></i> Cambiar Contraseña
+                    </a>
                     <button class="btn btn-outline-light btn-sm mt-2 w-100" onclick="logout()">
                         <i class="bi bi-box-arrow-right me-2"></i>Cerrar Sesión
                     </button>
@@ -75,12 +78,6 @@ $currentUser = $auth->getCurrentUser();
 
             <!-- Main Content -->
             <div class="col-md-9 col-lg-10 main-content p-4">
-                <!-- Breadcrumb -->
-                <nav aria-label="breadcrumb">
-                    <ol class="breadcrumb">
-                        <li class="breadcrumb-item active" id="breadcrumb-current">Dashboard</li>
-                    </ol>
-                </nav>
 
                 <!-- Dashboard Section -->
                 <div id="dashboard-section">

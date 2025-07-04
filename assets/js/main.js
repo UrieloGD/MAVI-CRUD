@@ -236,44 +236,6 @@ function clearSearch() {
     loadClientes();
 }
 
-// Cargar clientes desde el servidor
-function loadClientes() {
-    showSpinner();
-    
-    const statusFilter = $('#statusFilter').val();
-    
-    $.ajax({
-        url: 'ajax/clientes.php',
-        method: 'GET',
-        data: {
-            action: 'read',
-            page: currentPage,
-            limit: currentLimit,
-            search: currentSearch,
-            status: statusFilter
-        },
-        dataType: 'json',
-        success: function(response) {
-            hideSpinner();
-            
-            if (response.success) {
-                renderClientesTable(response.data);
-                renderPagination(response.pagination);
-                updateClientesCount(response.pagination.total);
-                // Actualizar estadísticas del dashboard
-                updateDashboardStats();
-            } else {
-                showAlert('error', 'Error al cargar clientes', response.message);
-            }
-        },
-        error: function(xhr, status, error) {
-            hideSpinner();
-            console.error('Error al cargar clientes:', error);
-            showAlert('error', 'Error', 'Error de conexión al servidor');
-        }
-    });
-}
-
 // Renderizar tabla de clientes
 function renderClientesTable(clientes) {
     const tbody = $('#clientesTable tbody');
@@ -322,7 +284,7 @@ function renderClientesTable(clientes) {
                 <td>${escapeHtml(cliente.apellido_paterno + ' ' + cliente.apellido_materno)}</td>
                 <td>${escapeHtml(cliente.correo_electronico)}</td>
                 <td>${statusBadge}</td>
-                <td class="text-center"> <!-- Agregar text-center aquí -->
+                <td class="text-center">
                     <div class="btn-group" role="group">
                         <button class="btn btn-sm btn-outline-primary" onclick="editCliente(${cliente.id})" title="Editar">
                             <i class="bi bi-pencil"></i>
@@ -749,7 +711,7 @@ function showAlert(type, title, message) {
     Swal.fire(config);
 }
 
-// Escapar HTML para evitar XSS
+// Escapar HTML para evitar ataques XSS
 function escapeHtml(text) {
     const map = {
         '&': '&amp;',
