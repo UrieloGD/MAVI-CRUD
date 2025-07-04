@@ -1,6 +1,6 @@
 <?php
-require_once './../classes/auth.php';
-require_once './../classes/cliente.php';
+require_once __DIR__ . '../../classes/auth.php';
+require_once __DIR__ . '../../classes/cliente.php';
 
 header('Content-Type: application/json');
 

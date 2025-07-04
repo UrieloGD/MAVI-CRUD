@@ -1,5 +1,5 @@
 <?php
-require_once './classes/auth.php';
+require_once __DIR__ . '../classes/auth.php';
 
 $auth = new Auth();
 

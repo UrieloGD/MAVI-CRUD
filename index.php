@@ -1,6 +1,6 @@
 <?php
-require_once './classes/Auth.php';
-require_once './classes/Cliente.php';
+require_once __DIR__ . '../classes/Auth.php';
+require_once __DIR__ . '../classes/Cliente.php';
 
 $auth = new Auth();
 $auth->requireAuth();
