@@ -7,6 +7,8 @@ $auth->requireAuth();
 
 $cliente = new Cliente();
 $totalClientes = $cliente->count();
+$clientesActivos = $cliente->countActive();
+$clientesInactivos = $cliente->countInactive();
 $currentUser = $auth->getCurrentUser();
 ?>
 <!DOCTYPE html>
@@ -96,7 +98,7 @@ $currentUser = $auth->getCurrentUser();
                                             <h5 class="card-title">Total Clientes</h5>
                                             <h2 class="mb-0" id="totalClientesCount"><?php echo $totalClientes; ?></h2>
                                         </div>
-                                        <div class="fs-1">
+                                        <div class="fs-1 text-white">
                                             <i class="bi bi-people-fill"></i>
                                         </div>
                                     </div>
@@ -108,11 +110,11 @@ $currentUser = $auth->getCurrentUser();
                                 <div class="card-body">
                                     <div class="d-flex align-items-center">
                                         <div class="flex-grow-1">
-                                            <h5 class="card-title">Nuevos Hoy</h5>
-                                            <h2 class="mb-0" id="nuevosHoyCount">0</h2>
+                                            <h5 class="card-title">Clientes Activos</h5>
+                                            <h2 class="mb-0" id="activosCount"><?php echo $clientesActivos; ?></h2>
                                         </div>
-                                        <div class="fs-1">
-                                            <i class="bi bi-person-plus-fill"></i>
+                                        <div class="fs-1 text-white">
+                                            <i class="bi bi-check-circle-fill"></i>
                                         </div>
                                     </div>
                                 </div>
@@ -123,11 +125,11 @@ $currentUser = $auth->getCurrentUser();
                                 <div class="card-body">
                                     <div class="d-flex align-items-center">
                                         <div class="flex-grow-1">
-                                            <h5 class="card-title">Activos</h5>
-                                            <h2 class="mb-0" id="activosCount"><?php echo $totalClientes; ?></h2>
+                                            <h5 class="card-title">Clientes Inactivos</h5>
+                                            <h2 class="mb-0" id="inactivosCount"><?php echo $clientesInactivos; ?></h2>
                                         </div>
-                                        <div class="fs-1">
-                                            <i class="bi bi-check-circle-fill"></i>
+                                        <div class="fs-1 text-white">
+                                            <i class="bi bi-pause-circle-fill"></i>
                                         </div>
                                     </div>
                                 </div>
@@ -170,13 +172,13 @@ $currentUser = $auth->getCurrentUser();
                     <div class="card">
                         <div class="card-header">
                             <div class="row align-items-center">
-                                <div class="col-md-4">
+                                <div class="col-md-3">
                                     <h5 class="card-title mb-0">
                                         Lista de Clientes
                                         <span class="badge bg-secondary ms-2" id="clientesCount">0</span>
                                     </h5>
                                 </div>
-                                <div class="col-md-4">
+                                <div class="col-md-2">
                                     <div class="d-flex align-items-center">
                                         <label for="recordsPerPage" class="form-label me-2 mb-0">Mostrar:</label>
                                         <select class="form-select form-select-sm" id="recordsPerPage" style="width: auto;">
@@ -184,7 +186,16 @@ $currentUser = $auth->getCurrentUser();
                                             <option value="20">20</option>
                                             <option value="50">50</option>
                                         </select>
-                                        <span class="text-muted ms-2">registros</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="d-flex align-items-center">
+                                        <label for="statusFilter" class="form-label me-2 mb-0">Filtrar:</label>
+                                        <select class="form-select form-select-sm" id="statusFilter">
+                                            <option value="">Todos</option>
+                                            <option value="activo">Activos</option>
+                                            <option value="inactivo">Inactivos</option>
+                                        </select>
                                     </div>
                                 </div>
                                 <div class="col-md-4">
@@ -213,6 +224,7 @@ $currentUser = $auth->getCurrentUser();
                                                 <th>Nombres</th>
                                                 <th>Apellidos</th>
                                                 <th>Correo</th>
+                                                <th>Estatus</th>
                                                 <th class="text-center">Acciones</th>
                                             </tr>
                                         </thead>
@@ -220,12 +232,6 @@ $currentUser = $auth->getCurrentUser();
                                             <!-- Datos cargados via Ajax -->
                                         </tbody>
                                     </table>
-                                </div>
-                                
-                                <!-- Indicador de scroll -->
-                                <div class="scroll-indicator">
-                                    <i class="bi bi-arrow-down"></i>
-                                    <small>Desplázate para ver más</small>
                                 </div>
                                 
                                 <div class="empty-state d-none">
@@ -238,11 +244,13 @@ $currentUser = $auth->getCurrentUser();
                                 </div>
                             </div>
                             
-                            <!-- Contenedor de paginación -->
                             <div id="paginationContainer" class="mt-3"></div>
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Modal Cliente -->
     <div class="modal fade" id="clienteModal" tabindex="-1" aria-labelledby="clienteModalLabel" aria-hidden="true">
@@ -300,6 +308,19 @@ $currentUser = $auth->getCurrentUser();
                                 <div class="form-floating">
                                     <textarea class="form-control" id="domicilio" name="domicilio" placeholder="Domicilio" style="height: 100px" required></textarea>
                                     <label for="domicilio">Domicilio *</label>
+                                    <div class="invalid-feedback"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="form-floating">
+                                    <select class="form-select" id="estatus" name="estatus" required>
+                                        <option value="activo" selected>Activo</option>
+                                        <option value="inactivo">Inactivo</option>
+                                    </select>
+                                    <label for="estatus">Estatus *</label>
                                     <div class="invalid-feedback"></div>
                                 </div>
                             </div>

@@ -28,8 +28,16 @@ function initializeApp() {
     // Configurar scroll de tabla
     setupTableScroll();
     
-    // Cargar datos iniciales
-    loadClientes();
+    // Ocultar spinner inicial
+    hideSpinner();
+    
+    // Cargar estadísticas del dashboard
+    updateDashboardStats();
+    
+    // Cargar datos iniciales solo si estamos en la sección de clientes
+    if (window.location.hash === '#clientes' || $('.nav-link[data-section="clientes"]').hasClass('active')) {
+        loadClientes();
+    }
 }
 
 // Configurar navegación
@@ -73,10 +81,11 @@ function setupForms() {
     });
 }
 
-// Configurar búsqueda
+// Configurar búsqueda y filtros
 function setupSearch() {
     let searchTimeout;
     
+    // Búsqueda
     $('#searchInput').on('input', function() {
         clearTimeout(searchTimeout);
         const searchTerm = $(this).val();
@@ -87,14 +96,26 @@ function setupSearch() {
             loadClientes();
         }, 500);
     });
-}
-
-// Configurar paginación
-function setupPagination() {
-    // Cambio en selector de registros por página
+    
+    // Filtro por estatus
+    $('#statusFilter').on('change', function() {
+        currentPage = 1;
+        loadClientes();
+    });
+    
+    // Selector de registros por página
     $('#recordsPerPage').on('change', function() {
         currentLimit = parseInt($(this).val());
-        currentPage = 1;
+        currentPage = 1; // Reiniciar a la primera página
+        loadClientes();
+    });
+}
+
+function setupPagination() {
+    // Selector de registros por página
+    $('#recordsPerPage').on('change', function() {
+        currentLimit = parseInt($(this).val());
+        currentPage = 1; // Reiniciar a la primera página
         loadClientes();
     });
 }
@@ -103,6 +124,8 @@ function setupPagination() {
 function loadClientes() {
     showSpinner();
     
+    const statusFilter = $('#statusFilter').val();
+    
     $.ajax({
         url: 'ajax/clientes.php',
         method: 'GET',
@@ -110,7 +133,8 @@ function loadClientes() {
             action: 'read',
             page: currentPage,
             limit: currentLimit,
-            search: currentSearch
+            search: currentSearch,
+            status: statusFilter
         },
         dataType: 'json',
         success: function(response) {
@@ -124,8 +148,9 @@ function loadClientes() {
                 showAlert('error', 'Error al cargar clientes', response.message);
             }
         },
-        error: function() {
+        error: function(xhr, status, error) {
             hideSpinner();
+            console.error('Error al cargar clientes:', error);
             showAlert('error', 'Error', 'Error de conexión al servidor');
         }
     });
@@ -169,7 +194,7 @@ function adjustTableHeight(recordCount) {
     } else if (recordCount >= 10) {
         // Para 10-19 registros, altura intermedia
         tableContainer.css({
-            'max-height': '450px',
+            'max-height': '600px',
             'overflow-y': 'auto'
         });
     } else {
@@ -180,6 +205,74 @@ function adjustTableHeight(recordCount) {
         });
     }
 }
+// Configurar búsqueda y filtros
+function setupSearch() {
+    let searchTimeout;
+    
+    // Búsqueda
+    $('#searchInput').on('input', function() {
+        clearTimeout(searchTimeout);
+        const searchTerm = $(this).val();
+        
+        searchTimeout = setTimeout(function() {
+            currentSearch = searchTerm;
+            currentPage = 1;
+            loadClientes();
+        }, 500);
+    });
+    
+    // Filtro por estatus
+    $('#statusFilter').on('change', function() {
+        currentPage = 1;
+        loadClientes();
+    });
+}
+
+// Limpiar búsqueda
+function clearSearch() {
+    $('#searchInput').val('');
+    currentSearch = '';
+    currentPage = 1;
+    loadClientes();
+}
+
+// Cargar clientes desde el servidor
+function loadClientes() {
+    showSpinner();
+    
+    const statusFilter = $('#statusFilter').val();
+    
+    $.ajax({
+        url: 'ajax/clientes.php',
+        method: 'GET',
+        data: {
+            action: 'read',
+            page: currentPage,
+            limit: currentLimit,
+            search: currentSearch,
+            status: statusFilter
+        },
+        dataType: 'json',
+        success: function(response) {
+            hideSpinner();
+            
+            if (response.success) {
+                renderClientesTable(response.data);
+                renderPagination(response.pagination);
+                updateClientesCount(response.pagination.total);
+                // Actualizar estadísticas del dashboard
+                updateDashboardStats();
+            } else {
+                showAlert('error', 'Error al cargar clientes', response.message);
+            }
+        },
+        error: function(xhr, status, error) {
+            hideSpinner();
+            console.error('Error al cargar clientes:', error);
+            showAlert('error', 'Error', 'Error de conexión al servidor');
+        }
+    });
+}
 
 // Renderizar tabla de clientes
 function renderClientesTable(clientes) {
@@ -189,7 +282,7 @@ function renderClientesTable(clientes) {
     if (clientes.length === 0) {
         tbody.append(`
             <tr>
-                <td colspan="5" class="text-center">
+                <td colspan="6" class="text-center">
                     <div class="py-4">
                         <i class="bi bi-inbox fs-1 text-muted"></i>
                         <p class="text-muted mt-2">No se encontraron clientes</p>
@@ -206,17 +299,35 @@ function renderClientesTable(clientes) {
     }
     
     clientes.forEach(cliente => {
+        const statusBadge = cliente.estatus === 'activo' 
+            ? '<span class="badge bg-success">Activo</span>' 
+            : '<span class="badge bg-secondary">Inactivo</span>';
+            
+        const statusIcon = cliente.estatus === 'activo' 
+            ? '<i class="bi bi-toggle-on text-success"></i>' 
+            : '<i class="bi bi-toggle-off text-muted"></i>';
+            
+        const statusAction = cliente.estatus === 'activo' 
+            ? `<button class="btn btn-sm btn-outline-warning" onclick="changeClienteStatus(${cliente.id}, 'inactivo')" title="Desactivar">
+                <i class="bi bi-toggle-off"></i>
+               </button>`
+            : `<button class="btn btn-sm btn-outline-success" onclick="changeClienteStatus(${cliente.id}, 'activo')" title="Activar">
+                <i class="bi bi-toggle-on"></i>
+               </button>`;
+        
         const row = `
-            <tr>
+            <tr class="${cliente.estatus === 'inactivo' ? 'table-secondary' : ''}">
                 <td><strong>${cliente.id}</strong></td>
                 <td>${escapeHtml(cliente.nombres)}</td>
                 <td>${escapeHtml(cliente.apellido_paterno + ' ' + cliente.apellido_materno)}</td>
                 <td>${escapeHtml(cliente.correo_electronico)}</td>
+                <td>${statusBadge}</td>
                 <td>
                     <div class="btn-group" role="group">
                         <button class="btn btn-sm btn-outline-primary" onclick="editCliente(${cliente.id})" title="Editar">
                             <i class="bi bi-pencil"></i>
                         </button>
+                        ${statusAction}
                         <button class="btn btn-sm btn-outline-danger" onclick="deleteCliente(${cliente.id})" title="Eliminar">
                             <i class="bi bi-trash"></i>
                         </button>
@@ -232,6 +343,68 @@ function renderClientesTable(clientes) {
     
     // Configurar scroll después de renderizar
     setTimeout(setupTableScroll, 100);
+}
+
+// Cambiar estatus de cliente
+function changeClienteStatus(id, newStatus) {
+    const statusText = newStatus === 'activo' ? 'activar' : 'desactivar';
+    const statusIcon = newStatus === 'activo' ? 'success' : 'warning';
+    
+    Swal.fire({
+        title: `¿${statusText.charAt(0).toUpperCase() + statusText.slice(1)} cliente?`,
+        text: `Se cambiará el estatus del cliente a ${newStatus}`,
+        icon: statusIcon,
+        showCancelButton: true,
+        confirmButtonColor: newStatus === 'activo' ? '#28a745' : '#ffc107',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: `Sí, ${statusText}`,
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            $.ajax({
+                url: 'ajax/clientes.php',
+                method: 'POST',
+                data: {
+                    action: 'changeStatus',
+                    id: id,
+                    status: newStatus
+                },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        showAlert('success', '¡Éxito!', response.message);
+                        loadClientes();
+                        // Actualizar contadores del dashboard
+                        updateDashboardStats();
+                    } else {
+                        showAlert('error', 'Error', response.message);
+                    }
+                },
+                error: function() {
+                    showAlert('error', 'Error', 'Error de conexión al servidor');
+                }
+            });
+        }
+    });
+}
+
+// Actualizar estadísticas del dashboard
+function updateDashboardStats() {
+    $.ajax({
+        url: 'ajax/clientes.php',
+        method: 'GET',
+        data: {
+            action: 'getStats'
+        },
+        dataType: 'json',
+        success: function(response) {
+            if (response.success) {
+                $('#totalClientesCount').text(response.data.total);
+                $('#activosCount').text(response.data.activos);
+                $('#inactivosCount').text(response.data.inactivos);
+            }
+        }
+    });
 }
 
 // Renderizar paginación
@@ -323,8 +496,6 @@ function changePage(page) {
 // Actualizar contador de clientes
 function updateClientesCount(count) {
     $('#clientesCount').text(count);
-    $('#totalClientesCount').text(count);
-    $('#activosCount').text(count);
 }
 
 // Mostrar modal para crear o editar cliente
@@ -374,6 +545,7 @@ function loadClienteData(id) {
                 $('#apellido_materno').val(cliente.apellido_materno);
                 $('#correo_electronico').val(cliente.correo_electronico);
                 $('#domicilio').val(cliente.domicilio);
+                $('#estatus').val(cliente.estatus);
             } else {
                 showAlert('error', 'Error', response.message);
             }

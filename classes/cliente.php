@@ -1,7 +1,6 @@
 <?php
 require_once 'database.php';
 
-// Clase cliente para manejar operaciones CRUD
 class Cliente {
     private $db;
 
@@ -14,14 +13,13 @@ class Cliente {
         try {
             $pdo = $this->db->getPdo();
             
-            // Verificar si el email ya existe
             if ($this->emailExists($data['correo_electronico'])) {
                 throw new Exception('El correo electrónico ya está registrado');
             }
 
             $stmt = $pdo->prepare("
-                INSERT INTO clientes (nombres, apellido_paterno, apellido_materno, domicilio, correo_electronico) 
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO clientes (nombres, apellido_paterno, apellido_materno, domicilio, correo_electronico, estatus) 
+                VALUES (?, ?, ?, ?, ?, ?)
             ");
             
             $stmt->execute([
@@ -29,7 +27,8 @@ class Cliente {
                 $data['apellido_paterno'],
                 $data['apellido_materno'],
                 $data['domicilio'],
-                $data['correo_electronico']
+                $data['correo_electronico'],
+                $data['estatus'] ?? 'activo'
             ]);
 
             return $pdo->lastInsertId();
@@ -50,17 +49,29 @@ class Cliente {
         }
     }
 
-    // Obtener todos los clientes con paginación y búsqueda opcional
-    public function getAll($limit = 10, $offset = 0, $search = '') {
+    // Obtener todos los clientes con paginación, búsqueda y filtro por estatus
+    public function getAll($limit = 10, $offset = 0, $search = '', $status = '') {
         try {
             $pdo = $this->db->getPdo();
-            $whereClause = '';
+            $whereConditions = [];
             $params = [];
 
+            // Filtro de búsqueda
             if (!empty($search)) {
-                $whereClause = "WHERE nombres LIKE ? OR apellido_paterno LIKE ? OR apellido_materno LIKE ? OR correo_electronico LIKE ?";
+                $whereConditions[] = "(nombres LIKE ? OR apellido_paterno LIKE ? OR apellido_materno LIKE ? OR correo_electronico LIKE ?)";
                 $searchTerm = "%{$search}%";
-                $params = [$searchTerm, $searchTerm, $searchTerm, $searchTerm];
+                $params = array_merge($params, [$searchTerm, $searchTerm, $searchTerm, $searchTerm]);
+            }
+
+            // Filtro por estatus
+            if (!empty($status)) {
+                $whereConditions[] = "estatus = ?";
+                $params[] = $status;
+            }
+
+            $whereClause = '';
+            if (!empty($whereConditions)) {
+                $whereClause = "WHERE " . implode(' AND ', $whereConditions);
             }
 
             $stmt = $pdo->prepare("
@@ -80,17 +91,29 @@ class Cliente {
         }
     }
 
-    // Contar clientes con búsqueda opcional
-    public function count($search = '') {
+    // Contar clientes con búsqueda y filtro por estatus
+    public function count($search = '', $status = '') {
         try {
             $pdo = $this->db->getPdo();
-            $whereClause = '';
+            $whereConditions = [];
             $params = [];
 
+            // Filtro de búsqueda
             if (!empty($search)) {
-                $whereClause = "WHERE nombres LIKE ? OR apellido_paterno LIKE ? OR apellido_materno LIKE ? OR correo_electronico LIKE ?";
+                $whereConditions[] = "(nombres LIKE ? OR apellido_paterno LIKE ? OR apellido_materno LIKE ? OR correo_electronico LIKE ?)";
                 $searchTerm = "%{$search}%";
-                $params = [$searchTerm, $searchTerm, $searchTerm, $searchTerm];
+                $params = array_merge($params, [$searchTerm, $searchTerm, $searchTerm, $searchTerm]);
+            }
+
+            // Filtro por estatus
+            if (!empty($status)) {
+                $whereConditions[] = "estatus = ?";
+                $params[] = $status;
+            }
+
+            $whereClause = '';
+            if (!empty($whereConditions)) {
+                $whereClause = "WHERE " . implode(' AND ', $whereConditions);
             }
 
             $stmt = $pdo->prepare("SELECT COUNT(*) FROM clientes {$whereClause}");
@@ -101,19 +124,42 @@ class Cliente {
         }
     }
 
+    // Contar clientes activos
+    public function countActive() {
+        try {
+            $pdo = $this->db->getPdo();
+            $stmt = $pdo->prepare("SELECT COUNT(*) FROM clientes WHERE estatus = 'activo'");
+            $stmt->execute();
+            return $stmt->fetchColumn();
+        } catch (Exception $e) {
+            throw new Exception('Error al contar clientes activos: ' . $e->getMessage());
+        }
+    }
+
+    // Contar clientes inactivos
+    public function countInactive() {
+        try {
+            $pdo = $this->db->getPdo();
+            $stmt = $pdo->prepare("SELECT COUNT(*) FROM clientes WHERE estatus = 'inactivo'");
+            $stmt->execute();
+            return $stmt->fetchColumn();
+        } catch (Exception $e) {
+            throw new Exception('Error al contar clientes inactivos: ' . $e->getMessage());
+        }
+    }
+
     // Actualizar cliente
     public function update($id, $data) {
         try {
             $pdo = $this->db->getPdo();
             
-            // Verificar si el email ya existe para otro cliente
             if ($this->emailExists($data['correo_electronico'], $id)) {
                 throw new Exception('El correo electrónico ya está registrado');
             }
 
             $stmt = $pdo->prepare("
                 UPDATE clientes 
-                SET nombres = ?, apellido_paterno = ?, apellido_materno = ?, domicilio = ?, correo_electronico = ?
+                SET nombres = ?, apellido_paterno = ?, apellido_materno = ?, domicilio = ?, correo_electronico = ?, estatus = ?
                 WHERE id = ?
             ");
             
@@ -123,6 +169,7 @@ class Cliente {
                 $data['apellido_materno'],
                 $data['domicilio'],
                 $data['correo_electronico'],
+                $data['estatus'] ?? 'activo',
                 $id
             ]);
 
@@ -141,6 +188,18 @@ class Cliente {
             return $stmt->rowCount() > 0;
         } catch (Exception $e) {
             throw new Exception('Error al eliminar cliente: ' . $e->getMessage());
+        }
+    }
+
+    // Cambiar estatus del cliente
+    public function changeStatus($id, $status) {
+        try {
+            $pdo = $this->db->getPdo();
+            $stmt = $pdo->prepare("UPDATE clientes SET estatus = ? WHERE id = ?");
+            $stmt->execute([$status, $id]);
+            return $stmt->rowCount() > 0;
+        } catch (Exception $e) {
+            throw new Exception('Error al cambiar estatus: ' . $e->getMessage());
         }
     }
 
@@ -168,39 +227,38 @@ class Cliente {
     public function validate($data) {
         $errors = [];
 
-        // Validar nombres
         if (empty($data['nombres'])) {
             $errors[] = 'El campo nombres es requerido';
         } elseif (strlen($data['nombres']) < 2) {
             $errors[] = 'El campo nombres debe tener al menos 2 caracteres';
         }
 
-        // Validar apellido paterno
         if (empty($data['apellido_paterno'])) {
             $errors[] = 'El apellido paterno es requerido';
         } elseif (strlen($data['apellido_paterno']) < 2) {
             $errors[] = 'El apellido paterno debe tener al menos 2 caracteres';
         }
 
-        // Validar apellido materno
         if (empty($data['apellido_materno'])) {
             $errors[] = 'El apellido materno es requerido';
         } elseif (strlen($data['apellido_materno']) < 2) {
             $errors[] = 'El apellido materno debe tener al menos 2 caracteres';
         }
 
-        // Validar domicilio
         if (empty($data['domicilio'])) {
             $errors[] = 'El domicilio es requerido';
         } elseif (strlen($data['domicilio']) < 10) {
             $errors[] = 'El domicilio debe tener al menos 10 caracteres';
         }
 
-        // Validar correo electrónico
         if (empty($data['correo_electronico'])) {
             $errors[] = 'El correo electrónico es requerido';
         } elseif (!filter_var($data['correo_electronico'], FILTER_VALIDATE_EMAIL)) {
             $errors[] = 'El correo electrónico no es válido';
+        }
+
+        if (isset($data['estatus']) && !in_array($data['estatus'], ['activo', 'inactivo'])) {
+            $errors[] = 'El estatus debe ser activo o inactivo';
         }
 
         return $errors;

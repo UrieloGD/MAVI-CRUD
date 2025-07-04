@@ -21,7 +21,8 @@ try {
                 'apellido_paterno' => $_POST['apellido_paterno'] ?? '',
                 'apellido_materno' => $_POST['apellido_materno'] ?? '',
                 'domicilio' => $_POST['domicilio'] ?? '',
-                'correo_electronico' => $_POST['correo_electronico'] ?? ''
+                'correo_electronico' => $_POST['correo_electronico'] ?? '',
+                'estatus' => $_POST['estatus'] ?? 'activo'
            ];
 
            // Validar datos
@@ -47,12 +48,13 @@ try {
             $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
             $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
             $search = isset($_GET['search']) ? trim($_GET['search']) : '';
+            $status = isset($_GET['status']) ? trim($_GET['status']) : '';
             
             $offset = ($page - 1) * $limit;
             
             try {
-                $clientes = $cliente->getAll($limit, $offset, $search);
-                $totalClientes = $cliente->count($search);
+                $clientes = $cliente->getAll($limit, $offset, $search, $status);
+                $totalClientes = $cliente->count($search, $status);
                 $totalPages = ceil($totalClientes / $limit);
                 
                 $startRecord = $totalClientes > 0 ? $offset + 1 : 0;
@@ -108,7 +110,8 @@ try {
                'apellido_paterno' => $_POST['apellido_paterno'] ?? '',
                'apellido_materno' => $_POST['apellido_materno'] ?? '',
                'domicilio' => $_POST['domicilio'] ?? '',
-               'correo_electronico' => $_POST['correo_electronico'] ?? ''
+               'correo_electronico' => $_POST['correo_electronico'] ?? '',
+               'estatus' => $_POST['estatus'] ?? 'activo'
            ];
 
            // Validar datos
@@ -149,6 +152,44 @@ try {
                'message' => 'Cliente eliminado exitosamente'
            ]);
            break;
+
+        case 'changeStatus':
+            $id = intval($_POST['id'] ?? 0);
+            $status = $_POST['status'] ?? '';
+            
+            if ($id <= 0) {
+                throw new Exception('ID inválido');
+            }
+            
+            if (!in_array($status, ['activo', 'inactivo'])) {
+                throw new Exception('Estatus inválido');
+            }
+            
+            $changed = $cliente->changeStatus($id, $status);
+            if (!$changed) {
+                throw new Exception('No se pudo cambiar el estatus del cliente');
+            }
+            
+            echo json_encode([
+                'success' => true,
+                'message' => 'Estatus actualizado exitosamente'
+            ]);
+            break;
+            
+        case 'getStats':
+            $totalClientes = $cliente->count();
+            $clientesActivos = $cliente->countActive();
+            $clientesInactivos = $cliente->countInactive();
+            
+            echo json_encode([
+                'success' => true,
+                'data' => [
+                    'total' => $totalClientes,
+                    'activos' => $clientesActivos,
+                    'inactivos' => $clientesInactivos
+                ]
+            ]);
+            break;
 
        case 'logout':
            $auth->logout();
