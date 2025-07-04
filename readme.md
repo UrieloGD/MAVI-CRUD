@@ -21,3 +21,7 @@ Sistema CRUD completo desarrollado en PHP con programación orientada a objetos 
 - jQuery
 - SweetAlert2
 - PDO para base de datos
+
+## Wiki/Documentación del proyecto
+
+- https://deepwiki.com/UrieloGD/MAVI-CRUD
