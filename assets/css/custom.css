@@ -181,6 +181,7 @@
 
 /* Tabla secundaria */
 .table-secondary {
+  align-items: center;
   opacity: 0.7;
 }
 

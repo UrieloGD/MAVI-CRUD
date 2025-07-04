@@ -322,7 +322,7 @@ function renderClientesTable(clientes) {
                 <td>${escapeHtml(cliente.apellido_paterno + ' ' + cliente.apellido_materno)}</td>
                 <td>${escapeHtml(cliente.correo_electronico)}</td>
                 <td>${statusBadge}</td>
-                <td>
+                <td class="text-center"> <!-- Agregar text-center aquí -->
                     <div class="btn-group" role="group">
                         <button class="btn btn-sm btn-outline-primary" onclick="editCliente(${cliente.id})" title="Editar">
                             <i class="bi bi-pencil"></i>
